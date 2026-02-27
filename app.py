@@ -8,7 +8,13 @@ st.set_page_config(page_title="Nutrition Formulary", layout="wide")
 # --- DATA LOADING ---
 @st.cache_data
 def load_data():
-    df = pd.read_csv('formulary.xlsx - Sheet1.csv')
+    # We are looking for the renamed file 'formulary.csv'
+    try:
+        df = pd.read_csv('formulary.csv')
+    except FileNotFoundError:
+        st.error("File 'formulary.csv' not found. Please ensure it is uploaded to GitHub.")
+        return pd.DataFrame()
+
     # Transpose so products are rows
     df = df.set_index('Name').T.reset_index()
     df.rename(columns={'index': 'Product Name'}, inplace=True)
@@ -23,12 +29,15 @@ def load_data():
     # Helper for numbers
     def to_num(val):
         try:
+            # Removes "kcal/mL", commas, and spaces to get the raw number
             return float(str(val).split()[0].replace(',', ''))
         except:
             return 0.0
             
     df['density_num'] = df['Density'].apply(to_num)
-    df['protein_num'] = df['Protein (g/L)'].apply(to_num)
+    # Finding the Protein column (it might have spaces or units)
+    prot_col = [c for c in df.columns if 'Protein (g/L)' in c][0]
+    df['protein_num'] = df[prot_col].apply(to_num)
     
     return df
 
@@ -40,6 +49,11 @@ category = st.selectbox("Select a Section:", ["Tube Feed Formulary", "TF Goal Ra
 
 st.divider()
 
+if df.empty:
+    st.warning("Please upload 'formulary.csv' to your GitHub repository to activate the app.")
+    st.stop()
+
+# --- SECTION 1: FORMULARY ---
 if category == "Tube Feed Formulary":
     st.subheader("📋 Product Listing")
     search = st.text_input("🔍 Search formula name...")
@@ -48,8 +62,9 @@ if category == "Tube Feed Formulary":
     
     # Download Button
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download Spreadsheet", data=csv, file_name='Formulary.csv', mime='text/csv')
+    st.download_button("📥 Download Spreadsheet", data=csv, file_name='Nutrition_Formulary.csv', mime='text/csv')
 
+# --- SECTION 2: CALCULATOR ---
 elif category == "TF Goal Rate & Protein Calculator":
     st.subheader("🧮 Enhanced Nutrition Calculator")
     
@@ -62,21 +77,17 @@ elif category == "TF Goal Rate & Protein Calculator":
         
         st.markdown("---")
         st.markdown("#### 💊 Lipid Medications")
-        propofol_rate = st.number_input("Propofol Rate (mL/hr):", min_value=0.0, value=0.0, step=1.0)
-        clevidipine_rate = st.number_input("Clevidipine Rate (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+        prop_rate = st.number_input("Propofol Rate (mL/hr):", min_value=0.0, value=0.0)
+        clev_rate = st.number_input("Clevidipine Rate (mL/hr):", min_value=0.0, value=0.0)
         
-        # Calculate Med Calories
-        # Propofol = 1.1 kcal/mL, Clevidipine = 2.0 kcal/mL
-        propofol_kcal = propofol_rate * 24 * 1.1
-        clevidipine_kcal = clevidipine_rate * 24 * 2.0
-        total_med_kcal = propofol_kcal + clevidipine_kcal
+        # Math: Propofol (1.1 kcal/mL), Clevidipine (2.0 kcal/mL)
+        med_kcal = (prop_rate * 24 * 1.1) + (clev_rate * 24 * 2.0)
         
         st.markdown("---")
         st.markdown("#### 🥤 Formula Selection")
         formula_list = df[df['Category'] == 'Formula']['Product Name'].tolist()
         choice = st.selectbox("Select Formula:", formula_list)
         
-        # Pull data for choice
         row = df[df['Product Name'] == choice].iloc[0]
         density = row['density_num']
         prot_per_l = row['protein_num']
@@ -86,42 +97,30 @@ elif category == "TF Goal Rate & Protein Calculator":
     with col2:
         st.markdown("### 2. Analysis")
         
-        # CALORIE CALCULATION
-        net_kcal_needed = target_kcal - total_med_kcal
-        if net_kcal_needed < 0: net_kcal_needed = 0
+        net_kcal = max(0, target_kcal - med_kcal)
+        total_vol = net_kcal / (density if density > 0 else 1)
+        rate = total_vol / hours
         
-        total_vol_day = net_kcal_needed / (density if density > 0 else 1)
-        hourly_rate = total_vol_day / hours
-        
-        # PROTEIN CALCULATION
-        # Note: If rate is rounded, recalculate protein based on actual flow
-        actual_vol = round(hourly_rate) * hours
+        # Actual delivery based on rounded rate
+        rounded_rate = round(rate)
+        actual_vol = rounded_rate * hours
         prot_provided = (actual_vol / 1000) * prot_per_l
         prot_gap = target_prot - prot_provided
 
-        # Display Metrics
-        st.metric("Total Med Calories", f"{round(total_med_kcal)} kcal/day")
-        st.metric("Goal Rate", f"{round(hourly_rate)} mL/hr")
+        st.metric("Total Med Calories", f"{round(med_kcal)} kcal/d")
+        st.metric("Goal Rate", f"{rounded_rate} mL/hr")
         
-        # Protein Status
         st.markdown("#### 🥩 Protein Status")
         if prot_gap > 0:
             st.error(f"Protein Gap: {round(prot_gap, 1)} g/day")
-            # Suggest Modulars
-            st.write("**Suggestions to fill gap:**")
-            st.write(f"- Prosource TF20: {round(prot_gap/20, 1)} packets/day")
-            st.write(f"- Beneprotein: {round(prot_gap/6, 1)} scoops/day")
+            st.write(f"**To fill gap, add:**")
+            st.write(f"- Prosource TF20: {round(prot_gap/20, 1)} packets")
+            st.write(f"- Beneprotein: {round(prot_gap/6, 1)} scoops")
         else:
-            st.success(f"Protein Goal Met! (Provides {round(prot_provided, 1)}g)")
+            st.success(f"Protein Goal Met! ({round(prot_provided, 1)}g provided)")
 
-        # Summary Box
-        st.info(f"""
-        **Final Plan:**
-        - **Formula:** {choice} at **{round(hourly_rate)} mL/hr** for {hours} hrs.
-        - **Total Volume:** {actual_vol} mL.
-        - **Kcal:** {round(actual_vol * density + total_med_kcal)} ({round(total_med_kcal)} from meds).
-        - **Protein:** {round(prot_provided, 1)} g.
-        """)
+        st.info(f"**Plan Summary:** Infuse {choice} at {rounded_rate} mL/hr for {hours} hours.")
 
 else:
-    st.info("Section under development. Use the dropdown to navigate.")
+    st.subheader(f"📂 {category}")
+    st.info("Section for future protocols and supplements.")
