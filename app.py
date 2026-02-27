@@ -16,6 +16,8 @@ def load_data():
 
     # Standardize column names for the internal calculator logic
     # We keep a transposed version for the math and a 'Card' version for display
+    # --- ADD THIS LINE TO REMOVE "NONE/NaN" ---
+    raw_df = raw_df.fillna("")
     
     # 1. THE CARD VIEW (Original structure for RDs)
     df_cards = raw_df.copy()
