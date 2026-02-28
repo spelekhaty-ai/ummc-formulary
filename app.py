@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Nutrition Formulary", layout="wide")
 
-# --- DATA LOADING & CLEANING ---
+# --- DATA LOADING ---
 @st.cache_data
 def load_data():
     try:
@@ -18,11 +17,11 @@ def load_data():
 
     raw_df = df_tf.fillna("")
 
-    # 1. THE CARD VIEW
+    # 1. CARD VIEW (For display)
     df_cards = raw_df.copy()
     df_cards.rename(columns={df_cards.columns[0]: 'Nutrient/Attribute'}, inplace=True)
 
-    # 2. THE CALCULATION VIEW
+    # 2. CALC VIEW (For math)
     df_calc = raw_df.set_index(raw_df.columns[0]).T.reset_index()
     df_calc.rename(columns={'index': 'Product Name'}, inplace=True)
     df_calc.columns = [str(c).strip() for c in df_calc.columns]
@@ -60,50 +59,15 @@ category = st.selectbox("Select a Section:", ["Tube Feed Formulary (Card View)",
 
 st.divider()
 
-# --- FOOTER FUNCTION ---
-def display_footer():
-    st.markdown("---")
-    footer_html = """
-    <div style='text-align: left; color: gray; font-size: 0.8em;'>
-        Created by: [Stacy Pelekhaty and Julie Gessler]<br>
-        Last Updated: [3.2026]<br>
-        Contact: [spelekhaty@umm.edu]
-    </div>
-    """
-    st.markdown(footer_html, unsafe_allow_headers=True)
-
-# --- LOGIC ---
-if df_calc.empty:
-    st.error("Data could not be loaded. Please ensure 'formulary.csv' is in your GitHub repo.")
-    display_footer()
-    st.stop()
-
-if "Formulary" in category:
-    st.subheader("📋 Tube Feeding Formulary Card")
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        nutrient_search = st.text_input("🔍 Search Nutrients (e.g., Sodium, Fiber)...")
-    with col_f2:
-        all_formulas = [c for c in df_cards.columns if c != 'Nutrient/Attribute']
-        selected_formulas = st.multiselect("🧪 Filter by Formula Name:", all_formulas)
-
-    display_cards = df_cards.copy()
-    if nutrient_search:
-        display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
-    if selected_formulas:
-        display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
-
-    st.dataframe(display_cards, use_container_width=True, hide_index=True)
-    csv = df_cards.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download Card", data=csv, file_name='Nutrition_Card.csv', mime='text/csv')
-
-elif category == "TF Goal Rate & Protein Calculator":
+# --- CALCULATOR LOGIC ---
+if category == "TF Goal Rate & Protein Calculator":
     st.subheader("🧮 Schedule & Protein Calculator")
-    c1, c2 = st.columns([1, 1])
     
-    with c1:
+    # Left Column: Patient Goals
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
         st.markdown("### 1. Goals & Weight")
-        # DEFAULT TO YES (True)
         use_weight = st.toggle("Calculate goals based on weight (kg)?", value=True)
         
         if use_weight:
@@ -126,22 +90,25 @@ elif category == "TF Goal Rate & Protein Calculator":
         prop_rate = st.number_input("Propofol Rate (mL/hr):", min_value=0.0, value=0.0)
         clev_rate = st.number_input("Clevidipine Rate (mL/hr):", min_value=0.0, value=0.0)
         med_kcal = (prop_rate * 24 * 1.1) + (clev_rate * 24 * 2.0)
-        
-        st.markdown("---")
-        method = st.radio("Feeding Method:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
-        formula_list = df_calc[df_calc['Category'] == 'Formula']['Product Name'].tolist()
-        choice = st.selectbox("Select Formula:", formula_list)
-        
-        row = df_calc[df_calc['Product Name'] == choice].iloc[0]
-        density, prot_per_l = row['density_num'], row['protein_num']
+
+    # Right Column: Feed Selection & Results
+    with col2:
+        st.markdown("### 2. Feeding Schedule")
+        method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
         
         if method == "Continuous/Cyclic":
             hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
         else:
             num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=5)
 
-    with c2:
-        st.markdown("### 2. Results")
+        formula_list = df_calc[df_calc['Category'] == 'Formula']['Product Name'].tolist()
+        choice = st.selectbox("Select Formula:", formula_list)
+        
+        row = df_calc[df_calc['Product Name'] == choice].iloc[0]
+        density, prot_per_l = row['density_num'], row['protein_num']
+
+        st.markdown("---")
+        # MATH
         net_kcal = max(0, target_kcal - med_kcal)
         safe_density = density if density > 0 else 1.0
         vol_needed = net_kcal / safe_density
@@ -159,17 +126,45 @@ elif category == "TF Goal Rate & Protein Calculator":
 
         prot_provided = (actual_vol / 1000) * prot_per_l
         prot_gap = target_prot - prot_provided
+        
         st.metric("Total Daily Volume", f"{actual_vol} mL")
         
-        st.markdown("#### 🥩 Protein Status")
         if prot_gap > 0:
             st.error(f"Protein Gap: {round(prot_gap, 1)} g/day")
             st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts | Beneprotein: {round(prot_gap/6, 1)} scps")
         else:
             st.success(f"Goal Met! ({round(prot_provided, 1)}g provided)")
 
+# --- FORMULARY SECTION ---
+elif "Formulary" in category:
+    st.subheader("📋 Tube Feeding Formulary Card")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        nutrient_search = st.text_input("🔍 Search Nutrients...")
+    with col_f2:
+        all_formulas = [c for c in df_cards.columns if c != 'Nutrient/Attribute']
+        selected_formulas = st.multiselect("🧪 Filter Formulas:", all_formulas)
+
+    display_cards = df_cards.copy()
+    if nutrient_search:
+        display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
+    if selected_formulas:
+        display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
+
+    st.dataframe(display_cards, use_container_width=True, hide_index=True)
+
 else:
     st.info("Additional sections will be added here.")
 
-# --- DISPLAY FOOTER AT END ---
-display_footer()
+# --- FOOTER (Fixed to prevent TypeError) ---
+st.markdown("---")
+st.markdown(
+    f"""
+    <div style='text-align: left; color: gray; font-size: 0.8em;'>
+        Created by: ['Stacy Pelekhaty and Julie Gessler']<br>
+        Last Updated: ['3.2026']<br>
+        Contact: ['spelekhaty2umm.edu']
+    </div>
+    """, 
+    unsafe_allow_headers=True
+)
