@@ -132,7 +132,7 @@ if category == "TF Goal Rate & Protein Calculator":
         
         if prot_gap > 0:
             st.error(f"Protein Gap: {round(prot_gap, 1)} g/day")
-            st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts | Beneprotein: {round(prot_gap/6, 1)} scps")
+            st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts")
         else:
             st.success(f"Goal Met! ({round(prot_provided, 1)}g provided)")
 
