@@ -159,6 +159,6 @@ else:
 
 # --- FOOTER (REFACTORED TO NATIVE STREAMLIT TO PREVENT ERROR) ---
 st.divider()
-st.caption("Created by: [Stacy Pelekhaty and Julie Gessler]")
+st.caption("Created by: Stacy Pelekhaty and Julie Gessler")
 st.caption("Last Updated: 3.2026")
-st.caption("Contact: [s.pelekhaty@umm.edu]")
+st.caption("Contact: s.pelekhaty@umm.edu")
