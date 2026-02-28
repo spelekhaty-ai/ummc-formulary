@@ -106,7 +106,8 @@ if category == "TF Goal Rate & Protein Calculator":
         
         row = df_calc[df_calc['Product Name'] == choice].iloc[0]
         density, prot_per_l = row['density_num'], row['protein_num']
-
+        
+        st.markdown("### 3. Results")
         st.markdown("---")
         # MATH
         net_kcal = max(0, target_kcal - med_kcal)
@@ -156,15 +157,8 @@ elif "Formulary" in category:
 else:
     st.info("Additional sections will be added here.")
 
-# --- FOOTER (Fixed to prevent TypeError) ---
-st.markdown("---")
-st.markdown(
-    f"""
-    <div style='text-align: left; color: gray; font-size: 0.8em;'>
-        Created by: ['Stacy Pelekhaty and Julie Gessler']<br>
-        Last Updated: ['3.2026']<br>
-        Contact: ['spelekhaty2umm.edu']
-    </div>
-    """, 
-    unsafe_allow_headers=True
-)
+# --- FOOTER (REFACTORED TO NATIVE STREAMLIT TO PREVENT ERROR) ---
+st.divider()
+st.caption("Created by: [Stacy Pelekhaty and Julie Gessler]")
+st.caption("Last Updated: 3.2026")
+st.caption("Contact: [s.pelekhaty@umm.edu]")
