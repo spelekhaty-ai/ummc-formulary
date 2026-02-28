@@ -99,7 +99,7 @@ if category == "TF Goal Rate & Protein Calculator":
         if method == "Continuous/Cyclic":
             hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
         else:
-            num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=5)
+            num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=4)
 
         formula_list = df_calc[df_calc['Category'] == 'Formula']['Product Name'].tolist()
         choice = st.selectbox("Select Formula:", formula_list)
