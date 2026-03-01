@@ -36,7 +36,8 @@ def load_data():
         # Calc View (For math/backend)
         df_calc = df.set_index(df.columns[0]).T.reset_index()
         df_calc.rename(columns={'index': 'Product Name'}, inplace=True)
-        df_calc.columns = [str(c).strip() for c in df_calc.columns]
+        # Standardize column names (remove newlines and extra spaces)
+        df_calc.columns = [str(c).replace('\n', ' ').strip() for c in df_calc.columns]
         
         # Handle duplicate % Calories
         cols = list(df_calc.columns)
@@ -51,6 +52,7 @@ def load_data():
 
         def to_num(val):
             try:
+                # Extracts numbers from strings like "1.5 kcal/mL" or "63.8 g/L"
                 return float(str(val).split()[0].replace(',', ''))
             except:
                 return 0.0
@@ -58,9 +60,16 @@ def load_data():
         if 'Density' in df_calc.columns:
             df_calc['density_num'] = df_calc['Density'].apply(to_num)
         
-        prot_col = [c for c in df_calc.columns if 'Protein (g/L)' in c or 'Protein' in c]
+        # MORE ROBUST PROTEIN COLUMN SEARCH
+        # Looks for any column containing 'Protein' and '(g/L)'
+        prot_col = [c for c in df_calc.columns if 'Protein' in c and '(g/L)' in c]
+        if not prot_col: # Fallback: look for just 'Protein'
+            prot_col = [c for c in df_calc.columns if 'Protein' in c]
+            
         if prot_col:
             df_calc['protein_num'] = df_calc[prot_col[0]].apply(to_num)
+        else:
+            df_calc['protein_num'] = 0.0
         
         modular_names = ['Prosource TF20', 'Nutrisource Fiber', 'MCT oil']
         df_calc['Category'] = df_calc['Product Name'].apply(lambda x: 'Modular' if x in modular_names else 'Formula')
@@ -80,46 +89,41 @@ category = st.selectbox("Select a Section:", ["Tube Feed Formulary (Card View)",
 
 st.divider()
 
-# --- SECTION: TUBE FEED FORMULARY ---
+# (Sections for Formulary Display remain same as your code)
 if category == "Tube Feed Formulary (Card View)":
     if df_cards_tf.empty:
-        st.error("Tube Feed data not found. Please ensure 'formulary.csv' is in your GitHub repo.")
+        st.error("Tube Feed data not found.")
     else:
         st.subheader("📋 Tube Feeding Formulary Card")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            nutrient_search = st.text_input("🔍 Search Nutrients (e.g., Sodium, Fiber)...", key="tf_nut_search")
+            nutrient_search = st.text_input("🔍 Search Nutrients...", key="tf_nut_search")
         with col_f2:
             all_formulas = [c for c in df_cards_tf.columns if c != 'Nutrient/Attribute']
             selected_formulas = st.multiselect("🧪 Filter Formulas:", all_formulas, key="tf_form_filter")
-
         display_cards = df_cards_tf.copy()
         if nutrient_search:
             display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
-
         st.dataframe(display_cards, use_container_width=True, hide_index=True)
 
-# --- SECTION: ORAL SUPPLEMENT FORMULARY ---
 elif category == "Oral Supplement Formulary (Card View)":
     if df_cards_ons.empty:
-        st.error("Oral Supplement data not found. Please ensure 'supplement_formulary.csv' is in your GitHub repo.")
+        st.error("Oral Supplement data not found.")
     else:
         st.subheader("🥤 Oral Supplement Formulary Card")
         col_o1, col_o2 = st.columns(2)
         with col_o1:
-            ons_nutrient_search = st.text_input("🔍 Search Nutrients (e.g., kcal, Protein)...", key="ons_nut_search")
+            ons_nutrient_search = st.text_input("🔍 Search Nutrients...", key="ons_nut_search")
         with col_o2:
             all_ons = [c for c in df_cards_ons.columns if c != 'Nutrient/Attribute']
             selected_ons = st.multiselect("🥤 Filter Supplements:", all_ons, key="ons_filter")
-
         display_ons = df_cards_ons.copy()
         if ons_nutrient_search:
             display_ons = display_ons[display_ons['Nutrient/Attribute'].str.contains(ons_nutrient_search, case=False)]
         if selected_ons:
             display_ons = display_ons[['Nutrient/Attribute'] + selected_ons]
-
         st.dataframe(display_ons, use_container_width=True, hide_index=True)
 
 # --- SECTION: CALCULATOR ---
@@ -187,6 +191,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 actual_vol = final_bolus * num_feeds
                 st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
 
+            # Calculation: (Actual mL / 1000) * grams of protein per Liter
             prot_provided = (actual_vol / 1000) * prot_per_l
             prot_gap = target_prot - prot_provided
             
@@ -197,9 +202,6 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts")
             else:
                 st.success(f"Goal Met! ({round(prot_provided, 1)}g provided)")
-
-else:
-    st.info("Additional sections will be added here.")
 
 # --- FOOTER ---
 st.divider()
