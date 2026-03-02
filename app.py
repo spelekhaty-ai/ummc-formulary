@@ -104,7 +104,7 @@ category = st.selectbox("Select a Section:", ["Tube Feed Formulary (Card View)",
 
 st.divider()
 
-# (Sections for Formulary Display remain same as your code)
+# --- SECTION: TUBE FEED FORMULARY ---
 if category == "Tube Feed Formulary (Card View)":
     if df_cards_tf.empty:
         st.error("Tube Feed data not found.")
@@ -116,23 +116,23 @@ if category == "Tube Feed Formulary (Card View)":
         with col_f2:
             all_formulas = [c for c in df_cards_tf.columns if c != 'Nutrient/Attribute']
             selected_formulas = st.multiselect("🧪 Filter Formulas:", all_formulas, key="tf_form_filter")
+        
         display_cards = df_cards_tf.copy()
         if nutrient_search:
             display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
-    st.dataframe(
+        
+        st.dataframe(
             display_cards, 
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Nutrient/Attribute": st.column_config.TextColumn(
-                    "Nutrient/Attribute",
-                    width="medium",
-                )
+                "Nutrient/Attribute": st.column_config.TextColumn(width="medium")
             }
         )
 
+# --- SECTION: ORAL SUPPLEMENT FORMULARY ---
 elif category == "Oral Supplement Formulary (Card View)":
     if df_cards_ons.empty:
         st.error("Oral Supplement data not found.")
@@ -144,20 +144,19 @@ elif category == "Oral Supplement Formulary (Card View)":
         with col_o2:
             all_ons = [c for c in df_cards_ons.columns if c != 'Nutrient/Attribute']
             selected_ons = st.multiselect("🥤 Filter Supplements:", all_ons, key="ons_filter")
+        
         display_ons = df_cards_ons.copy()
         if ons_nutrient_search:
             display_ons = display_ons[display_ons['Nutrient/Attribute'].str.contains(ons_nutrient_search, case=False)]
         if selected_ons:
             display_ons = display_ons[['Nutrient/Attribute'] + selected_ons]
-       st.dataframe(
+        
+        st.dataframe(
             display_ons, 
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "Nutrient/Attribute": st.column_config.TextColumn(
-                    "Nutrient/Attribute",
-                    width="medium",
-                )
+                "Nutrient/Attribute": st.column_config.TextColumn(width="medium")
             }
         )
 
