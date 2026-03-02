@@ -80,6 +80,44 @@ category = st.selectbox("Select a Section:", ["Tube Feed Formulary (Card View)",
 
 st.divider()
 
+# --- CUSTOM CSS FOR SCROLLING + WRAPPING ---
+# This style block ensures columns don't squish but text still wraps
+st.markdown("""
+    <style>
+        .scroll-container {
+            overflow-x: auto;
+            width: 100%;
+            border: 1px solid #e6e9ef;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: sans-serif;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e6e9ef;
+            border-right: 1px solid #e6e9ef;
+            min-width: 180px; /* Prevents columns from getting too thin */
+            max-width: 300px; /* Prevents columns from getting too wide */
+            white-space: normal !important; /* FORCES WRAP */
+            word-wrap: break-word;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f8f9fb;
+            color: #31333F;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {background-color: #f1f3f6;}
+    </style>
+""", unsafe_allow_html=True)
+
 # --- SECTION: TUBE FEED FORMULARY ---
 if category == "Tube Feed Formulary (Card View)":
     if df_cards_tf.empty:
@@ -99,8 +137,8 @@ if category == "Tube Feed Formulary (Card View)":
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
         
-        # --- FIXED WRAPPING HERE ---
-        st.table(display_cards)
+        # --- SCROLLABLE WRAPPED TABLE ---
+        st.write(f'<div class="scroll-container">{display_cards.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
 # --- SECTION: ORAL SUPPLEMENT FORMULARY ---
 elif category == "Oral Supplement Formulary (Card View)":
@@ -121,8 +159,8 @@ elif category == "Oral Supplement Formulary (Card View)":
         if selected_ons:
             display_ons = display_ons[['Nutrient/Attribute'] + selected_ons]
         
-        # --- FIXED WRAPPING HERE ---
-        st.table(display_ons)
+        # --- SCROLLABLE WRAPPED TABLE ---
+        st.write(f'<div class="scroll-container">{display_ons.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
 # --- SECTION: CALCULATOR ---
 elif category == "TF Goal Rate & Protein Calculator":
