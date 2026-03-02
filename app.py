@@ -106,7 +106,17 @@ if category == "Tube Feed Formulary (Card View)":
             display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
-        st.dataframe(display_cards, use_container_width=True, hide_index=True)
+        st.dataframe(
+            display_ons,
+            use_container_width=True,
+            hide_index+True,
+            column_config={
+                "Nutrient/Attribute": st.column.config.TextColumn(
+                    "Nutrient/Attribute",
+                    width="medium",
+                )
+            }
+        )
 
 elif category == "Oral Supplement Formulary (Card View)":
     if df_cards_ons.empty:
