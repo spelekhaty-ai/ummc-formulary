@@ -1,6 +1,21 @@
 import streamlit as st
 import pandas as pd
 
+# Force table cells to wrap text instead of cutting it off
+st.markdown(
+    """
+    <style>
+    .stDataFrame div[data-testid="stTable"] td {
+        white-space: normal !important;
+    }
+    .stDataFrame div[data-testid="stTable"] th {
+        white-space: normal !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Nutrition Formulary", layout="wide")
 
@@ -106,12 +121,12 @@ if category == "Tube Feed Formulary (Card View)":
             display_cards = display_cards[display_cards['Nutrient/Attribute'].str.contains(nutrient_search, case=False)]
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
-        st.dataframe(
-            display_ons,
-            use_container_width=True,
-            hide_index+True,
+    st.dataframe(
+            display_cards, 
+            use_container_width=True, 
+            hide_index=True,
             column_config={
-                "Nutrient/Attribute": st.column.config.TextColumn(
+                "Nutrient/Attribute": st.column_config.TextColumn(
                     "Nutrient/Attribute",
                     width="medium",
                 )
@@ -134,7 +149,17 @@ elif category == "Oral Supplement Formulary (Card View)":
             display_ons = display_ons[display_ons['Nutrient/Attribute'].str.contains(ons_nutrient_search, case=False)]
         if selected_ons:
             display_ons = display_ons[['Nutrient/Attribute'] + selected_ons]
-        st.dataframe(display_ons, use_container_width=True, hide_index=True)
+       st.dataframe(
+            display_ons, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Nutrient/Attribute": st.column_config.TextColumn(
+                    "Nutrient/Attribute",
+                    width="medium",
+                )
+            }
+        )
 
 # --- SECTION: CALCULATOR ---
 elif category == "TF Goal Rate & Protein Calculator":
