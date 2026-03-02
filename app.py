@@ -1,28 +1,12 @@
 import streamlit as st
 import pandas as pd
 
-# Force table cells to wrap text instead of cutting it off
-st.markdown(
-    """
-    <style>
-    .stDataFrame div[data-testid="stTable"] td {
-        white-space: normal !important;
-    }
-    .stDataFrame div[data-testid="stTable"] th {
-        white-space: normal !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Nutrition Formulary", layout="wide")
 
 # --- DATA LOADING ---
 @st.cache_data
 def load_data():
-    # 1. Load Tube Feed Data
     try:
         df_tf_raw = pd.read_csv('formulary.csv')
     except:
@@ -31,7 +15,6 @@ def load_data():
         except:
             df_tf_raw = pd.DataFrame()
 
-    # 2. Load Oral Supplement Data
     try:
         df_ons_raw = pd.read_csv('supplement_formulary.csv')
     except:
@@ -41,7 +24,6 @@ def load_data():
         if df.empty:
             return pd.DataFrame(), pd.DataFrame()
         
-        # Clean the dataframe
         df = df.fillna("")
         
         # Card View (For display)
@@ -51,10 +33,8 @@ def load_data():
         # Calc View (For math/backend)
         df_calc = df.set_index(df.columns[0]).T.reset_index()
         df_calc.rename(columns={'index': 'Product Name'}, inplace=True)
-        # Standardize column names (remove newlines and extra spaces)
         df_calc.columns = [str(c).replace('\n', ' ').strip() for c in df_calc.columns]
         
-        # Handle duplicate % Calories
         cols = list(df_calc.columns)
         count_pct = 0
         for i in range(len(cols)):
@@ -67,7 +47,6 @@ def load_data():
 
         def to_num(val):
             try:
-                # Extracts numbers from strings like "1.5 kcal/mL" or "63.8 g/L"
                 return float(str(val).split()[0].replace(',', ''))
             except:
                 return 0.0
@@ -75,10 +54,8 @@ def load_data():
         if 'Density' in df_calc.columns:
             df_calc['density_num'] = df_calc['Density'].apply(to_num)
         
-        # MORE ROBUST PROTEIN COLUMN SEARCH
-        # Looks for any column containing 'Protein' and '(g/L)'
         prot_col = [c for c in df_calc.columns if 'Protein' in c and '(g/L)' in c]
-        if not prot_col: # Fallback: look for just 'Protein'
+        if not prot_col:
             prot_col = [c for c in df_calc.columns if 'Protein' in c]
             
         if prot_col:
@@ -91,8 +68,7 @@ def load_data():
         
         return df_cards, df_calc
 
-    df_cards_tf, df_calc_tf = process_formulary(df_tf_raw)
-    df_cards_ons, df_calc_ons = process_formulary(df_ons_raw)
+    df_cards_tf, df_calc_tf, df_cards_ons, df_calc_ons = process_formulary(df_tf_raw)[0], process_formulary(df_tf_raw)[1], process_formulary(df_ons_raw)[0], process_formulary(df_ons_raw)[1]
     
     return df_cards_tf, df_calc_tf, df_cards_ons, df_calc_ons
 
@@ -112,7 +88,7 @@ if category == "Tube Feed Formulary (Card View)":
         st.subheader("📋 Tube Feeding Formulary Card")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
-            nutrient_search = st.text_input("🔍 Search Nutrients...", key="tf_nut_search")
+            nutrient_search = st.text_input("🔍 Search Nutrients (e.g., Sodium, Fiber)...", key="tf_nut_search")
         with col_f2:
             all_formulas = [c for c in df_cards_tf.columns if c != 'Nutrient/Attribute']
             selected_formulas = st.multiselect("🧪 Filter Formulas:", all_formulas, key="tf_form_filter")
@@ -123,14 +99,8 @@ if category == "Tube Feed Formulary (Card View)":
         if selected_formulas:
             display_cards = display_cards[['Nutrient/Attribute'] + selected_formulas]
         
-        st.dataframe(
-            display_cards, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "Nutrient/Attribute": st.column_config.TextColumn(width="medium")
-            }
-        )
+        # --- FIXED WRAPPING HERE ---
+        st.table(display_cards)
 
 # --- SECTION: ORAL SUPPLEMENT FORMULARY ---
 elif category == "Oral Supplement Formulary (Card View)":
@@ -151,14 +121,8 @@ elif category == "Oral Supplement Formulary (Card View)":
         if selected_ons:
             display_ons = display_ons[['Nutrient/Attribute'] + selected_ons]
         
-        st.dataframe(
-            display_ons, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "Nutrient/Attribute": st.column_config.TextColumn(width="medium")
-            }
-        )
+        # --- FIXED WRAPPING HERE ---
+        st.table(display_ons)
 
 # --- SECTION: CALCULATOR ---
 elif category == "TF Goal Rate & Protein Calculator":
@@ -225,7 +189,6 @@ elif category == "TF Goal Rate & Protein Calculator":
                 actual_vol = final_bolus * num_feeds
                 st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
 
-            # Calculation: (Actual mL / 1000) * grams of protein per Liter
             prot_provided = (actual_vol / 1000) * prot_per_l
             prot_gap = target_prot - prot_provided
             
@@ -236,6 +199,9 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts")
             else:
                 st.success(f"Goal Met! ({round(prot_provided, 1)}g provided)")
+
+else:
+    st.info("Additional sections will be added here.")
 
 # --- FOOTER ---
 st.divider()
