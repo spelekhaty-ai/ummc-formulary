@@ -168,6 +168,22 @@ elif category == "TF Goal Rate & Protein Calculator":
         st.error("Tube Feed data required for calculator.")
     else:
         st.subheader("🧮 Schedule & Protein Calculator")
+        
+        # --- NEW: SELECTION GUIDANCE EXPANDER ---
+        with st.expander("📖 View Formula Selection Guidance"):
+            g1, g2, g3, g4 = st.columns(4)
+            with g1:
+                st.markdown("**Standard**")
+                st.caption("• Jevity 1.5: Normal GI function\n• Osmolite 1.5: Low fiber needs")
+            with g2:
+                st.markdown("**ICU**")
+                st.caption("• Vital High Protein: CRRT, ECMO, high rate propofol\n• Vital AF 1.2: SCI, malabsorption, low carb\n• Peptamen 1.5: malabsorption\n•  Pivot 1.5: Trauma, TBI/n• ")
+            with g3:
+                st.markdown("**Specialized**")
+                st.caption("• Nepro: Low electrolyte, low carb\n• Glucerna 1.5: low carb, polymeric\n• Vital AF 1.2: low carb, semi-elemental")
+             with g4:
+                st.markdown("**Allergies and Diet Limits**")
+                st.caption("• Kate Farms (all): Vegan, Kosher, free from top 8 allergens\n• All: gluten and lactose free\n• Vital + Pivot: NOT Kosher")               
         col1, col2 = st.columns([1, 1])
         
         with col1:
@@ -179,7 +195,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 with w_col1:
                     weight = st.number_input("Weight (kg):", min_value=0.0, value=70.0)
                 with w_col2:
-                    kcal_kg = st.number_input("kcal/kg:", min_value=0, value=25)
+                    kcal_kg = st.number_input("kcal/kg:", min_value=0, value=20)
                 with w_col3:
                     prot_kg = st.number_input("g Pro/kg:", min_value=0.0, value=1.2, step=0.1)
                 calc_kcal, calc_prot = round(weight * kcal_kg), round(weight * prot_kg)
