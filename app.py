@@ -182,7 +182,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.markdown("**Specialized**")
                 st.caption("> **Nepro: Low electrolyte, low carb\n | Glucerna 1.5: low carb, polymeric\n | Vital AF 1.2: low carb, semi-elemental**")
             with g4:
-                st.markdown("**Allergies & Limited Diets**")
+                st.markdown("**Allergy & Culture**")
                 st.caption("> **Kate Farms (all): Vegan, Kosher, free from top 8 allergens\n | All: gluten and lactose free\n | Vital + Pivot: NOT Kosher**")               
         col1, col2 = st.columns([1, 1])
         
