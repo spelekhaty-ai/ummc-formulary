@@ -182,7 +182,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.markdown("**Specialized**")
                 st.caption("> **Nepro: Low electrolyte, low carb\n | Glucerna 1.5: low carb, polymeric\n | Vital AF 1.2: low carb, semi-elemental**")
             with g4:
-                st.markdown("**Allergies and Diet Limits**")
+                st.markdown("**Allergies & Limited Diets**")
                 st.caption("> **Kate Farms (all): Vegan, Kosher, free from top 8 allergens\n | All: gluten and lactose free\n | Vital + Pivot: NOT Kosher**")               
         col1, col2 = st.columns([1, 1])
         
@@ -207,9 +207,35 @@ elif category == "TF Goal Rate & Protein Calculator":
             target_prot = st.number_input("Daily Protein Goal (g):", value=int(calc_prot), step=5)
             
             st.markdown("#### 💊 Lipid Medications")
-            prop_rate = st.number_input("Propofol Rate (mL/hr):", min_value=0.0, value=0.0)
-            clev_rate = st.number_input("Clevidipine Rate (mL/hr):", min_value=0.0, value=0.0)
+            
+            # Toggle for Units
+            med_units = st.radio("Enter Dose In:", ["mL/hr", "mcg/min"], horizontal=True)
+            
+            m_col1, m_col2 = st.columns(2)
+            
+            with m_col1:
+                if med_units == "mL/hr":
+                    prop_rate = st.number_input("Propofol (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+                else:
+                    # Conversion: (mcg/min * 60 min) / 10,000 mcg per mL
+                    prop_mcg = st.number_input("Propofol (mcg/min):", min_value=0.0, value=0.0, step=5.0)
+                    prop_rate = (prop_mcg * 60) / 10000
+            
+            with m_col2:
+                if med_units == "mL/hr":
+                    clev_rate = st.number_input("Clevidipine (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+                else:
+                    # Conversion: (mcg/min * 60 min) / 500 mcg per mL
+                    clev_mcg = st.number_input("Clevidipine (mcg/min):", min_value=0.0, value=0.0, step=1.0)
+                    clev_rate = (clev_mcg * 60) / 500
+            
+            # Final Calculation for Med Calories
+            # Propofol = 1.1 kcal/mL | Clevidipine = 2.0 kcal/mL
             med_kcal = (prop_rate * 24 * 1.1) + (clev_rate * 24 * 2.0)
+            
+            if med_kcal > 0:
+                st.caption(f"**|** Calculated Med Vol: {round(prop_rate + clev_rate, 1)} mL/hr")
+                st.caption(f"**|** Total Med Calories: {round(med_kcal)} kcal/day")
 
         with col2:
             st.markdown("### 2. Feeding Schedule")
