@@ -194,16 +194,19 @@ elif category == "TF Goal Rate & Protein Calculator":
 
         with col1:
             st.markdown("### 1. Patient Goals")
+            
+            # Move weight here so it is ALWAYS defined
+            weight = st.number_input("Weight (kg):", min_value=1.0, value=70.0)
+            
             use_weight = st.toggle("Calculate goals based on weight (kg)?", value=True)
             
             if use_weight:
-                w_col1, w_col2, w_col3 = st.columns(3)
+                w_col1, w_col2 = st.columns(2)
                 with w_col1:
-                    weight = st.number_input("Weight (kg):", min_value=0.0, value=70.0)
+                    kcal_kg = st.number_input("kcal/kg:", min_value=0, value=25)
                 with w_col2:
-                    kcal_kg = st.number_input("kcal/kg:", min_value=0, value=20)
-                with w_col3:
                     prot_kg = st.number_input("g Pro/kg:", min_value=0.0, value=1.2, step=0.1)
+                
                 calc_kcal, calc_prot = round(weight * kcal_kg), round(weight * prot_kg)
                 st.info(f"Targets: {calc_kcal} kcal | {calc_prot} g Protein")
             else:
