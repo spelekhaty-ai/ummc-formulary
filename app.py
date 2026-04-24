@@ -185,9 +185,15 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.markdown("**Allergy & Culture**")
                 st.caption("> **Kate Farms (all): Vegan, Kosher, free from top 8 allergens\n | All: gluten and lactose free\n | Vital + Pivot: NOT Kosher**")               
         col1, col2 = st.columns([1, 1])
-        
+
+        # --- MODE TOGGLE ---
+        calc_mode = st.radio("Calculator Mode:", ["Calculate Goal Rate", "Check Current Provision"], horizontal=True)
+        st.divider()
+
+        col1, col2 = st.columns([1, 1])
+
         with col1:
-            st.markdown("### 1. Goals & Weight")
+            st.markdown("### 1. Patient Goals")
             use_weight = st.toggle("Calculate goals based on weight (kg)?", value=True)
             
             if use_weight:
@@ -238,13 +244,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.caption(f"**|** Total Med Calories: {round(med_kcal)} kcal/day")
 
         with col2:
-            st.markdown("### 2. Feeding Schedule")
-            method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
-            
-            if method == "Continuous/Cyclic":
-                hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
-            else:
-                num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=4)
+            st.markdown("### 2. Infusion Details")
 
             formula_list = df_calc_tf[df_calc_tf['Category'] == 'Formula']['Product Name'].tolist()
             choice = st.selectbox("Select Formula:", formula_list)
@@ -252,33 +252,64 @@ elif category == "TF Goal Rate & Protein Calculator":
             row = df_calc_tf[df_calc_tf['Product Name'] == choice].iloc[0]
             density, prot_per_l = row['density_num'], row['protein_num']
 
-            st.divider()
-            st.markdown("### 3. Results")
-            net_kcal = max(0, target_kcal - med_kcal)
-            safe_density = density if density > 0 else 1.0
-            vol_needed = net_kcal / safe_density
+            # Free Water Logic
+            water_col = [c for c in df_calc_tf.columns if 'Water' in c]
+            def free_water(val):
+                try:
+                    return float(str(val).replace('%', '').strip()) / 100
+                except:
+                    return 0.80
+            water_factor = clean_water(row[water_col[0]]) if water_col else 0.80
             
-            if method == "Continuous/Cyclic":
-                final_rate = int(5 * round((vol_needed / hours) / 5))
-                if final_rate == 0 and vol_needed > 0: final_rate = 5
-                actual_vol = final_rate * hours
-                st.metric("Goal Hourly Rate", f"{final_rate} mL/hr")
-            else:
-                final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
-                if final_bolus == 0 and vol_needed > 0: final_bolus = 10
-                actual_vol = final_bolus * num_feeds
-                st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
+            method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
+            
+            if calc_mode == "Calculate Goal Rate":
+                method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
+                if method == "Continuous/Cyclic":
+                    hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
+                    net_kcal = max(0, target_kcal - med_kcal)
+                    vol_needed = net_kcal / (density if density > 0 else 1)
+                    final_rate = int(5 * round((vol_needed / hours) / 5))
+                    if final_rate == 0 and vol_needed > 0: final_rate = 5
+                    actual_vol = final_rate * hours
+                    st.metric("Goal Hourly Rate", f"{final_rate} mL/hr")
+                else:
+                    num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=5)
+                    net_kcal = max(0, target_kcal - med_kcal)
+                    vol_needed = net_kcal / (density if density > 0 else 1)
+                    final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
+                    actual_vol = final_bolus * num_feeds
+                    st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
+            
+            else: # Provision Check Mode
+                i_col1, i_col2 = st.columns(2)
+                with i_col1:
+                    rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60)
+                with i_col2:
+                    hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
+                actual_vol = rate_entry * hours_entry
 
-            prot_provided = (actual_vol / 1000) * prot_per_l
-            prot_gap = target_prot - prot_provided
+            # Final Calculations
+            total_kcal = (actual_vol * density) + med_kcal
+            total_prot = (actual_vol / 1000) * prot_l
+            free_water = actual_vol * water_factor
+
+            st.divider()
+            st.markdown("### 3. Summary of Provision")
             
-            st.metric("Total Daily Volume", f"{actual_vol} mL")
-            
-            if prot_gap > 0:
-                st.error(f"Protein Gap: {round(prot_gap, 1)} g/day")
-                st.write(f"Prosource TF20: {round(prot_gap/20, 1)} pkts")
-            else:
-                st.success(f"Goal Met! ({round(prot_provided, 1)}g provided)")
+            res1, res2, res3 = st.columns(3)
+            with res1:
+                st.metric("Calories", f"{round(total_kcal)} kcal")
+                st.caption(f"**|** {round((total_kcal / target_kcal) * 100)}% Goal")
+                st.caption(f"**|** {round(total_kcal / weight, 1)} kcal/kg")
+            with res2:
+                st.metric("Protein", f"{round(total_prot, 1)} g")
+                st.caption(f"**|** {round((total_prot / target_prot) * 100)}% Goal")
+                st.caption(f"**|** {round(total_prot / weight, 1)} g/kg")
+            with res3:
+                st.metric("Free Water", f"{round(free_water)} mL")
+                st.caption(f"**|** {round(free_water / weight, 1)} mL/kg")
+                st.caption(f"**|** Total Vol: {actual_vol} mL")
 
 else:
     st.info("Additional sections will be added here.")
