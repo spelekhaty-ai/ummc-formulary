@@ -245,43 +245,41 @@ elif category == "TF Goal Rate & Protein Calculator":
 
         with col2:
             st.markdown("### 2. Infusion Details")
-
-            formula_list = df_calc_tf[df_calc_tf['Category'] == 'Formula']['Product Name'].tolist()
+            formula_list = df_calc_tf['Product Name'].tolist()
             choice = st.selectbox("Select Formula:", formula_list)
             
             row = df_calc_tf[df_calc_tf['Product Name'] == choice].iloc[0]
-            density, prot_per_l = row['density_num'], row['protein_num']
-
-            # Free Water Logic
+            dens, prot_l = row['density_num'], row['protein_num']
+            
+            # Water calculation
             water_col = [c for c in df_calc_tf.columns if 'Water' in c]
-            def free_water(val):
-                try:
-                    return float(str(val).replace('%', '').strip()) / 100
-                except:
-                    return 0.80
-            water_factor = clean_water(row[water_col[0]]) if water_col else 0.80
-            
-            method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
-            
+            def clean_w(v):
+                try: return float(str(v).replace('%', '').strip()) / 100
+                except: return 0.8
+            w_factor = clean_w(row[water_col[0]]) if water_col else 0.8
+
             if calc_mode == "Calculate Goal Rate":
-                method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True)
+                # ADDED UNIQUE KEY 'goal_method'
+                method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True, key="goal_method")
+                
                 if method == "Continuous/Cyclic":
                     hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
                     net_kcal = max(0, target_kcal - med_kcal)
-                    vol_needed = net_kcal / (density if density > 0 else 1)
-                    final_rate = int(5 * round((vol_needed / hours) / 5))
-                    if final_rate == 0 and vol_needed > 0: final_rate = 5
-                    actual_vol = final_rate * hours
-                    st.metric("Goal Hourly Rate", f"{final_rate} mL/hr")
+                    vol_needed = net_kcal / (dens if dens > 0 else 1)
+                    final_val = int(5 * round((vol_needed / hours) / 5))
+                    if final_val == 0 and vol_needed > 0: final_val = 5
+                    actual_vol = final_val * hours
+                    st.metric("Goal Hourly Rate", f"{final_val} mL/hr")
                 else:
                     num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=5)
                     net_kcal = max(0, target_kcal - med_kcal)
-                    vol_needed = net_kcal / (density if density > 0 else 1)
+                    vol_needed = net_kcal / (dens if dens > 0 else 1)
                     final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
                     actual_vol = final_bolus * num_feeds
                     st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
             
             else: # Provision Check Mode
+                # IF YOU HAD A RADIO BUTTON HERE, GIVE IT A KEY LIKE key="prov_method"
                 i_col1, i_col2 = st.columns(2)
                 with i_col1:
                     rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60)
@@ -289,10 +287,10 @@ elif category == "TF Goal Rate & Protein Calculator":
                     hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
                 actual_vol = rate_entry * hours_entry
 
-            # Final Calculations
-            total_kcal = (actual_vol * density) + med_kcal
+            # Final Calculations (Protein, Calories, Water)
+            total_kcal = (actual_vol * dens) + med_kcal
             total_prot = (actual_vol / 1000) * prot_l
-            free_water = actual_vol * water_factor
+            free_water = actual_vol * w_factor
 
             st.divider()
             st.markdown("### 3. Summary of Provision")
@@ -300,17 +298,17 @@ elif category == "TF Goal Rate & Protein Calculator":
             res1, res2, res3 = st.columns(3)
             with res1:
                 st.metric("Calories", f"{round(total_kcal)} kcal")
-                st.caption(f"**|** {round((total_kcal / target_kcal) * 100)}% Goal")
-                st.caption(f"**|** {round(total_kcal / weight, 1)} kcal/kg")
+                st.caption(f"| {round((total_kcal / target_kcal) * 100)}% Goal")
+                st.caption(f"| {round(total_kcal / weight, 1)} kcal/kg")
             with res2:
                 st.metric("Protein", f"{round(total_prot, 1)} g")
-                st.caption(f"**|** {round((total_prot / target_prot) * 100)}% Goal")
-                st.caption(f"**|** {round(total_prot / weight, 1)} g/kg")
+                st.caption(f"| {round((total_prot / target_prot) * 100)}% Goal")
+                st.caption(f"| {round(total_prot / weight, 1)} g/kg")
             with res3:
                 st.metric("Free Water", f"{round(free_water)} mL")
-                st.caption(f"**|** {round(free_water / weight, 1)} mL/kg")
-                st.caption(f"**|** Total Vol: {actual_vol} mL")
-
+                st.caption(f"| {round(free_water / weight, 1)} mL/kg")
+                st.caption(f"| Total Vol: {actual_vol} mL")
+                
 else:
     st.info("Additional sections will be added here.")
 
