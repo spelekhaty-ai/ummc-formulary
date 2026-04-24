@@ -274,7 +274,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                     actual_vol = final_val * hours
                     st.metric("Goal Hourly Rate", f"{final_val} mL/hr")
                 else:
-                    num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=12, value=5)
+                    num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=6, value=4)
                     net_kcal = max(0, target_kcal - med_kcal)
                     vol_needed = net_kcal / (dens if dens > 0 else 1)
                     final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
