@@ -195,56 +195,43 @@ elif category == "TF Goal Rate & Protein Calculator":
         with col1:
             st.markdown("### 1. Patient Goals")
             
-            # Move weight here so it is ALWAYS defined
-            weight = st.number_input("Weight (kg):", min_value=1.0, value=70.0)
+            # Weight is outside the toggle so it's always available for math
+            weight = st.number_input("Weight (kg):", min_value=1.0, value=70.0, step=1.0)
             
-            use_weight = st.toggle("Calculate goals based on weight (kg)?", value=True)
+            use_weight_goals = st.toggle("Calculate targets based on weight?", value=True)
             
-            if use_weight:
+            if use_weight_goals:
                 w_col1, w_col2 = st.columns(2)
                 with w_col1:
-                    kcal_kg = st.number_input("kcal/kg:", min_value=0, value=25)
+                    kcal_kg_input = st.number_input("kcal/kg:", min_value=0, value=20, step=1)
                 with w_col2:
-                    prot_kg = st.number_input("g Pro/kg:", min_value=0.0, value=1.2, step=0.1)
+                    prot_kg_input = st.number_input("g Pro/kg:", min_value=0.0, value=1.2, step=0.1)
                 
-                calc_kcal, calc_prot = round(weight * kcal_kg), round(weight * prot_kg)
-                st.info(f"Targets: {calc_kcal} kcal | {calc_prot} g Protein")
+                calc_kcal = round(weight * kcal_kg_input)
+                calc_prot = round(weight * prot_kg_input)
+                st.info(f"**|** Targets: {calc_kcal} kcal | {calc_prot} g Protein")
             else:
                 calc_kcal, calc_prot = 1800, 100
 
-            target_kcal = st.number_input("Daily Calorie Goal (kcal):", value=int(calc_kcal), step=50)
-            target_prot = st.number_input("Daily Protein Goal (g):", value=int(calc_prot), step=5)
-            
+            target_kcal = st.number_input("Goal kcal/day:", value=int(calc_kcal), step=50)
+            target_prot = st.number_input("Goal g Pro/day:", value=int(calc_prot), step=5)
+
             st.markdown("#### 💊 Lipid Medications")
-            
-            # Toggle for Units
             med_units = st.radio("Enter Dose In:", ["mL/hr", "mcg/min"], horizontal=True)
-            
             m_col1, m_col2 = st.columns(2)
             
-            with m_col1:
-                if med_units == "mL/hr":
-                    prop_rate = st.number_input("Propofol (mL/hr):", min_value=0.0, value=0.0, step=1.0)
-                else:
-                    # Conversion: (mcg/min * 60 min) / 10,000 mcg per mL
-                    prop_mcg = st.number_input("Propofol (mcg/min):", min_value=0.0, value=0.0, step=5.0)
-                    prop_rate = (prop_mcg * 60) / 10000
+            if med_units == "mL/hr":
+                with m_col1: p_rate = st.number_input("Propofol (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+                with m_col2: c_rate = st.number_input("Clevidipine (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+            else:
+                with m_col1: 
+                    p_mcg = st.number_input("Propofol (mcg/min):", min_value=0.0, value=0.0, step=5.0)
+                    p_rate = (p_mcg * 60) / 10000
+                with m_col2:
+                    c_mcg = st.number_input("Clevidipine (mcg/min):", min_value=0.0, value=0.0, step=1.0)
+                    c_rate = (c_mcg * 60) / 500
             
-            with m_col2:
-                if med_units == "mL/hr":
-                    clev_rate = st.number_input("Clevidipine (mL/hr):", min_value=0.0, value=0.0, step=1.0)
-                else:
-                    # Conversion: (mcg/min * 60 min) / 500 mcg per mL
-                    clev_mcg = st.number_input("Clevidipine (mcg/min):", min_value=0.0, value=0.0, step=1.0)
-                    clev_rate = (clev_mcg * 60) / 500
-            
-            # Final Calculation for Med Calories
-            # Propofol = 1.1 kcal/mL | Clevidipine = 2.0 kcal/mL
-            med_kcal = (prop_rate * 24 * 1.1) + (clev_rate * 24 * 2.0)
-            
-            if med_kcal > 0:
-                st.caption(f"**|** Calculated Med Vol: {round(prop_rate + clev_rate, 1)} mL/hr")
-                st.caption(f"**|** Total Med Calories: {round(med_kcal)} kcal/day")
+            med_kcal = (p_rate * 24 * 1.1) + (c_rate * 24 * 2.0)
 
         with col2:
             st.markdown("### 2. Infusion Details")
@@ -254,17 +241,17 @@ elif category == "TF Goal Rate & Protein Calculator":
             row = df_calc_tf[df_calc_tf['Product Name'] == choice].iloc[0]
             dens, prot_l = row['density_num'], row['protein_num']
             
-            # Water calculation
+            # Water content logic
             water_col = [c for c in df_calc_tf.columns if 'Water' in c]
             def clean_w(v):
                 try: return float(str(v).replace('%', '').strip()) / 100
                 except: return 0.8
             w_factor = clean_w(row[water_col[0]]) if water_col else 0.8
 
+            prosource_prot = 0.0
+
             if calc_mode == "Calculate Goal Rate":
-                # ADDED UNIQUE KEY 'goal_method'
                 method = st.radio("Schedule Type:", ["Continuous/Cyclic", "Bolus"], horizontal=True, key="goal_method")
-                
                 if method == "Continuous/Cyclic":
                     hours = st.slider("Infusion Hours per Day:", 1, 24, 24)
                     net_kcal = max(0, target_kcal - med_kcal)
@@ -274,30 +261,31 @@ elif category == "TF Goal Rate & Protein Calculator":
                     actual_vol = final_val * hours
                     st.metric("Goal Hourly Rate", f"{final_val} mL/hr")
                 else:
-                    num_feeds = st.number_input("Number of Feeds per Day:", min_value=1, max_value=6, value=4)
+                    num_feeds = st.number_input("Feeds per Day:", min_value=1, max_value=8, value=4)
                     net_kcal = max(0, target_kcal - med_kcal)
                     vol_needed = net_kcal / (dens if dens > 0 else 1)
                     final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
                     actual_vol = final_bolus * num_feeds
                     st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
-            
-            else: # Provision Check Mode
-                # IF YOU HAD A RADIO BUTTON HERE, GIVE IT A KEY LIKE key="prov_method"
+            else:
                 i_col1, i_col2 = st.columns(2)
-                with i_col1:
-                    rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60)
-                with i_col2:
-                    hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
+                with i_col1: rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60, step=5)
+                with i_col2: hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
                 actual_vol = rate_entry * hours_entry
+                
+                st.markdown("#### ➕ Modulars")
+                if st.checkbox("Including ProSource TF20?"):
+                    pkts = st.number_input("Packets per day:", min_value=0.5, value=1.0, step=0.5)
+                    prosource_prot = pkts * 20.0
 
-            # Final Calculations (Protein, Calories, Water)
-            total_kcal = (actual_vol * dens) + med_kcal
-            total_prot = (actual_vol / 1000) * prot_l
+            # Final Summary Math
+            prosource_kcal = (prosource_prot / 20) * 100
+            total_kcal = (actual_vol * dens) + med_kcal + prosource_kcal
+            total_prot = ((actual_vol / 1000) * prot_l) + prosource_prot
             free_water = actual_vol * w_factor
 
             st.divider()
             st.markdown("### 3. Summary of Provision")
-            
             res1, res2, res3 = st.columns(3)
             with res1:
                 st.metric("Calories", f"{round(total_kcal)} kcal")
@@ -311,6 +299,16 @@ elif category == "TF Goal Rate & Protein Calculator":
                 st.metric("Free Water", f"{round(free_water)} mL")
                 st.caption(f"| {round(free_water / weight, 1)} mL/kg")
                 st.caption(f"| Total Vol: {actual_vol} mL")
+
+            prot_gap = target_prot - total_prot
+            if calc_mode == "Calculate Goal Rate" and prot_gap > 0.5:
+                st.error(f"**Protein Gap:** {round(prot_gap, 1)} g/day")
+                pkts_needed = round(prot_gap / 20, 1)
+                st.info(f"**Recommendation:** Provide **{pkts_needed}** pkts of Prosource TF20.")
+            elif prot_gap <= 0.5:
+                st.success(f"✅ Regimen Meets Goals")
+            else:
+                st.warning(f"Remaining Protein Deficit: {round(prot_gap, 1)} g/day")
                 
 else:
     st.info("Additional sections will be added here.")
