@@ -271,7 +271,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                 prov_method = st.radio("Current Schedule:", ["Continuous/Cyclic", "Bolus"], horizontal=True, key="prov_method")
                 i_col1, i_col2 = st.columns(2)
                 if prov_method == "Continuous/Cyclic":
-                    with i_col1: rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60, step=5)
+                    with i_col1: rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60, step=4)
                     with i_col2: hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
                     actual_vol = rate_entry * hours_entry
                 else:
