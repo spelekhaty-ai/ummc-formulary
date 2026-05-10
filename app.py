@@ -268,8 +268,8 @@ elif category == "TF Goal Rate & Protein Calculator":
                     actual_vol = final_bolus * num_feeds
                     st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
                 # Provision Check Mode
-                else: 
-                    # Selection for how they are currently fed
+                # Selection for how they are currently fed
+                else:
                     prov_method = st.radio("Current Schedule:", ["Continuous/Cyclic", "Bolus"], horizontal=True, key="prov_method")
                     
                     i_col1, i_col2 = st.columns(2)
