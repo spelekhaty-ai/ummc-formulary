@@ -267,16 +267,28 @@ elif category == "TF Goal Rate & Protein Calculator":
                     final_bolus = int(10 * round((vol_needed / num_feeds) / 10))
                     actual_vol = final_bolus * num_feeds
                     st.metric("Volume per Feed", f"{final_bolus} mL/bolus")
-            else:
-                i_col1, i_col2 = st.columns(2)
-                with i_col1: rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60, step=5)
-                with i_col2: hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
-                actual_vol = rate_entry * hours_entry
-                
-                st.markdown("#### ➕ Modulars")
-                if st.checkbox("Including ProSource TF20?"):
-                    pkts = st.number_input("Packets per day:", min_value=0.5, value=1.0, step=0.5)
-                    prosource_prot = pkts * 20.0
+                else: # Provision Check Mode
+                    # Selection for how they are currently fed
+                    prov_method = st.radio("Current Schedule:", ["Continuous/Cyclic", "Bolus"], horizontal=True, key="prov_method")
+                    
+                    i_col1, i_col2 = st.columns(2)
+                    if prov_method == "Continuous/Cyclic":
+                        with i_col1: 
+                            rate_entry = st.number_input("Current Rate (mL/hr):", min_value=0, value=60, step=5)
+                        with i_col2: 
+                            hours_entry = st.number_input("Hours per Day:", min_value=1, max_value=24, value=24)
+                        actual_vol = rate_entry * hours_entry
+                    else:
+                        with i_col1:
+                            bolus_vol = st.number_input("mL per Bolus:", min_value=0, value=240, step=10)
+                        with i_col2:
+                            bolus_count = st.number_input("Number of Boluses/Day:", min_value=1, max_value=12, value=5)
+                        actual_vol = bolus_vol * bolus_count
+                    
+                    st.markdown("#### ➕ Modulars")
+                    if st.checkbox("Including ProSource TF20?", key="prov_prosource"):
+                        pkts = st.number_input("Packets per day:", min_value=0.5, value=1.0, step=0.5)
+                        prosource_prot = pkts * 20.0
 
             # Final Summary Math
             prosource_kcal = (prosource_prot / 20) * 100
