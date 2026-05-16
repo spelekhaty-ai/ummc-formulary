@@ -216,22 +216,34 @@ elif category == "TF Goal Rate & Protein Calculator":
             target_kcal = st.number_input("Goal kcal/day:", value=int(calc_kcal), step=50)
             target_prot = st.number_input("Goal g Pro/day:", value=int(calc_prot), step=5)
 
-            st.markdown("#### 💊 Lipid Medications")
-            med_units = st.radio("Enter Dose In:", ["mL/hr", "mcg/min"], horizontal=True)
+        st.markdown("#### 💊 Lipid Medications")
+            med_units = st.radio("Enter Dose In:", ["mL/hr", "mcg/kg/min"], horizontal=True)
             m_col1, m_col2 = st.columns(2)
             
             if med_units == "mL/hr":
-                with m_col1: p_rate = st.number_input("Propofol (mL/hr):", min_value=0.0, value=0.0, step=1.0)
-                with m_col2: c_rate = st.number_input("Clevidipine (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+                with m_col1: 
+                    p_rate = st.number_input("Propofol (mL/hr):", min_value=0.0, value=0.0, step=1.0)
+                with m_col2: 
+                    c_rate = st.number_input("Clevidipine (mL/hr):", min_value=0.0, value=0.0, step=1.0)
             else:
                 with m_col1: 
-                    p_mcg = st.number_input("Propofol (mcg/min):", min_value=0.0, value=0.0, step=5.0)
-                    p_rate = (p_mcg * 60) / 10000
+                    # Conversion: (mcg/kg/min * kg * 60 min) / 10,000 mcg per mL
+                    p_mcg_kg = st.number_input("Propofol (mcg/kg/min):", min_value=0.0, value=0.0, step=5.0)
+                    p_rate = (p_mcg_kg * weight * 60) / 10000
                 with m_col2:
-                    c_mcg = st.number_input("Clevidipine (mcg/min):", min_value=0.0, value=0.0, step=1.0)
-                    c_rate = (c_mcg * 60) / 500
+                    # Conversion: (mcg/kg/min * kg * 60 min) / 500 mcg per mL
+                    c_mcg_kg = st.number_input("Clevidipine (mcg/kg/min):", min_value=0.0, value=0.0, step=1.0)
+                    c_rate = (c_mcg_kg * weight * 60) / 500
             
-            med_kcal = (p_rate * 24 * 1.1) + (c_rate * 24 * 2.0)
+            # Breakdown of Calories
+            p_kcal_day = p_rate * 24 * 1.1
+            c_kcal_day = c_rate * 24 * 2.0
+            med_kcal = p_kcal_day + c_kcal_day
+
+            if med_kcal > 0:
+                st.warning(f"**Medication Calorie Breakdown:**")
+                if p_kcal_day > 0: st.caption(f"| Propofol: {round(p_kcal_day)} kcal/day ({round(p_rate, 1)} mL/hr)")
+                if c_kcal_day > 0: st.caption(f"| Clevidipine: {round(c_kcal_day)} kcal/day ({round(c_rate, 1)} mL/hr)")
 
         with col2:
             st.markdown("### 2. Infusion Details")
