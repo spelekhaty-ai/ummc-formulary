@@ -216,7 +216,7 @@ elif category == "TF Goal Rate & Protein Calculator":
             target_kcal = st.number_input("Goal kcal/day:", value=int(calc_kcal), step=50)
             target_prot = st.number_input("Goal g Pro/day:", value=int(calc_prot), step=5)
 
-        st.markdown("#### 💊 Lipid Medications")
+            st.markdown("#### 💊 Lipid Medications")
             med_units = st.radio("Enter Dose In:", ["mL/hr", "mcg/kg/min"], horizontal=True)
             m_col1, m_col2 = st.columns(2)
             
