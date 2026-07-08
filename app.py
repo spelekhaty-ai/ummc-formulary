@@ -288,7 +288,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                     actual_vol = rate_entry * hours_entry
                 else:
                     with i_col1: b_vol = st.number_input("mL per Bolus:", min_value=0, value=240, step=10)
-                    with i_col2: b_count = st.number_input("Boluses/Day:", min_value=1, max_value=12, value=5)
+                    with i_col2: b_count = st.number_input("Boluses/Day:", min_value=1, max_value=12, value=4)
                     actual_vol = b_vol * b_count
                 
                 st.markdown("#### ➕ Modulars")
@@ -297,7 +297,7 @@ elif category == "TF Goal Rate & Protein Calculator":
                     prosource_prot = pkts * 20.0
 
             # Final Summary Math
-            prosource_kcal = (prosource_prot / 20) * 100
+            prosource_kcal = (prosource_prot / 20) * 80
             total_kcal = (actual_vol * dens) + med_kcal + prosource_kcal
             total_prot = ((actual_vol / 1000) * prot_l) + prosource_prot
             free_water = actual_vol * w_factor
@@ -334,5 +334,5 @@ else:
 # --- FOOTER ---
 st.divider()
 st.caption("Created by: Stacy Pelekhaty and Julie Gessler")
-st.caption("Last Updated: 5.2026")
+st.caption("Last Updated: 7.2026")
 st.caption("Contact: spelekhaty@umm.edu")
